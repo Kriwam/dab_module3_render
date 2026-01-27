@@ -1,32 +1,22 @@
-// Redis caching middleware
-// NOTE: If views break or show wrong data, clear Redis keys (/hotels, /rooms)
+var client = require("../redis.js");
 
-
-var client = require('../redis.js');
-
-function cache(viewName, dataKey) {
+function cache(viewName, dataProp, cacheKey) {
   return async function (req, res, next) {
     try {
-      const key = req.originalUrl;
+      const key = cacheKey || req.originalUrl;
       const cached = await client.get(key);
 
       if (cached) {
         return res.render(viewName, {
-          [dataKey]: JSON.parse(cached),
-
-          // ✅ add these so EJS doesn't crash
+          [dataProp]: JSON.parse(cached),
           user: req.user ?? null,
-          username: req.user?.username ?? 0,
-
-          // keep these if other pages use them
-          userId: req.user?.id ?? 0,
-          isAdmin: req.user?.role === "Admin"
+          username: req.user?.username ?? null,
         });
       }
 
       next();
     } catch (err) {
-      console.error(err);
+      console.error("Cache middleware error:", err);
       next();
     }
   };

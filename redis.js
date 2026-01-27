@@ -14,10 +14,19 @@ const buildRedisUrl = () => {
   if (!host || !port || !pass) return null;
 
   const protocol = tls ? "rediss" : "redis";
-  return `${protocol}://${encodeURIComponent(user)}:${encodeURIComponent(pass)}@${host}:${port}`;
+  return `${protocol}://${encodeURIComponent(user)}:${encodeURIComponent(
+    pass
+  )}@${host}:${port}`;
 };
 
 const redisUrl = buildRedisUrl();
+
+// ✅ If Redis is not configured, export null and don’t connect
+if (!redisUrl) {
+  console.warn("Redis not configured: missing REDIS_URL or REDIS_* variables");
+  module.exports = null;
+  return;
+}
 
 const redisClient = createClient({
   url: redisUrl,
@@ -26,15 +35,11 @@ const redisClient = createClient({
   },
 });
 
-// ✅ put the “full error” handler here
+// ✅ full error logging
 redisClient.on("error", (err) => console.error("Redis error full:", err));
 
 (async () => {
   try {
-    if (!redisUrl) {
-      console.warn("Redis not configured: missing REDIS_URL or REDIS_* variables");
-      return;
-    }
     await redisClient.connect();
     console.log("Redis connected");
   } catch (err) {
@@ -43,4 +48,5 @@ redisClient.on("error", (err) => console.error("Redis error full:", err));
 })();
 
 module.exports = redisClient;
+
 

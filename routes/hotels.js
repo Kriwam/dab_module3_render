@@ -16,6 +16,8 @@ router.get(
   cache('hotels', 'hotels'),
   async function(req, res, next) {
     const hotels = await hotelService.get();
+
+    // Store the list in redis as well (this matches what you already did)
     await client.set(req.originalUrl, JSON.stringify(hotels));
 
     const username = req.user?.username ?? null;
@@ -33,9 +35,12 @@ router.get('/:hotelId', async function(req, res, next) {
 router.post('/', checkIfAuthorized, isAdmin, jsonParser, async function(req, res) {
   await hotelService.create(req.body.Name, req.body.Location);
 
-  // invalidate cache (both possible keys)
+  // Invalidate cache (delete all likely keys)
   await client.del('/hotels');
   await client.del('hotels');
+
+  // Also in case cache middleware uses full URL key
+  await client.del(req.originalUrl);
 
   res.sendStatus(201);
 });
@@ -43,12 +48,11 @@ router.post('/', checkIfAuthorized, isAdmin, jsonParser, async function(req, res
 router.delete('/:id', checkIfAuthorized, async function(req, res) {
   await hotelService.deleteHotel(req.params.id);
 
-  // invalidate cache (both possible keys)
+  // Invalidate cache (delete all likely keys)
   await client.del('/hotels');
   await client.del('hotels');
 
   res.sendStatus(204);
 });
-
 
 module.exports = router;

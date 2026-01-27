@@ -18,7 +18,7 @@ router.get(
     const hotels = await hotelService.get();
     await client.set(req.originalUrl, JSON.stringify(hotels));
 
-    const username = req.user?.username ?? null0;
+    const username = req.user?.username ?? null;
     res.render('hotels', { hotels: hotels, user: req.user, username: username });
   }
 );
@@ -32,14 +32,23 @@ router.get('/:hotelId', async function(req, res, next) {
 
 router.post('/', checkIfAuthorized, isAdmin, jsonParser, async function(req, res) {
   await hotelService.create(req.body.Name, req.body.Location);
-  await client.del('/hotels'); // invalidate cache
-  res.end();
+
+  // invalidate cache (both possible keys)
+  await client.del('/hotels');
+  await client.del('hotels');
+
+  res.sendStatus(201);
 });
 
 router.delete('/:id', checkIfAuthorized, async function(req, res) {
   await hotelService.deleteHotel(req.params.id);
-  await client.del('/hotels'); // invalidate cache
-  res.end();
+
+  // invalidate cache (both possible keys)
+  await client.del('/hotels');
+  await client.del('hotels');
+
+  res.sendStatus(204);
 });
+
 
 module.exports = router;

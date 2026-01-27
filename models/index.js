@@ -3,17 +3,19 @@ const fs = require("fs")
 const path = require("path")
 const basename = path.basename(__filename);
 require('dotenv').config()
-const connection = {
+const sequelize = new Sequelize({
   database: process.env.DATABASE_NAME,
   username: process.env.ADMIN_USERNAME,
   password: process.env.ADMIN_PASSWORD,
+  port: process.env.DB_PORT,
   host: process.env.HOST,
   dialect: process.env.DIALECT,
-  dialectmodel: process.env.DIALECTMODEL,
-};
-const sequelize = new Sequelize(connection);
+  dialectModel: process.env.DIALECTMODEL,
+});
+
 const db = {}
 db.sequelize = sequelize
+
 fs.readdirSync(__dirname)
   .filter(file => {
     return (file.indexOf('.') !== 0) && (file !== basename) &&   

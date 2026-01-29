@@ -1,3 +1,4 @@
+// routes/hotels.js
 var express = require("express");
 var router = express.Router();
 var bodyParser = require("body-parser");
@@ -13,38 +14,60 @@ var cache = require("../middleware/caching.js");
 var client = require("../redis.js");
 
 /* GET hotels listing */
-router.get("/", cache("hotels", "hotels", "/hotels"), async function (req, res) {
-  const hotels = await hotelService.get();
+router.get("/", cache("hotels", "hotels"), async function (req, res, next) {
+  try {
+    const hotels = await hotelService.get();
 
-  // store cache under SAME key used above
-  await client.set("/hotels", JSON.stringify(hotels));
+    // cache uses req.originalUrl as key, for /hotels it is "/hotels"
+    await client.set(req.originalUrl, JSON.stringify(hotels));
 
-  const username = req.user?.username ?? null;
-  res.render("hotels", { hotels: hotels, user: req.user, username: username });
+    const username = req.user?.username ?? null;
+    res.render("hotels", { hotels: hotels, user: req.user, username: username });
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.get("/:hotelId", async function (req, res) {
-  const userId = req.user?.id ?? 0;
-  const username = req.user?.username ?? null;
-  const hotel = await hotelService.getHotelDetails(req.params.hotelId, userId);
-  res.render("hotelDetails", { hotel, userId, user: req.user, username });
+router.get("/:hotelId", async function (req, res, next) {
+  try {
+    const userId = req.user?.id ?? 0;
+    const username = req.user?.username ?? null;
+    const hotel = await hotelService.getHotelDetails(req.params.hotelId, userId);
+    res.render("hotelDetails", { hotel, userId, user: req.user, username });
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.post("/", checkIfAuthorized, isAdmin, jsonParser, async function (req, res) {
-  await hotelService.create(req.body.Name, req.body.Location);
+router.post("/", checkIfAuthorized, isAdmin, jsonParser, async function (req, res, next) {
+  try {
+    const { Name, Location } = req.body;
 
-  // invalidate hotels list cache
-  await client.del("/hotels");
+    if (!Name || !Location) {
+      return res.status(400).json({ message: "Name and Location are required" });
+    }
 
-  res.sendStatus(201);
+    await hotelService.create(Name, Location);
+
+    // ✅ invalidate the SAME key the cache middleware uses
+    await client.del("/hotels");
+
+    return res.sendStatus(201);
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.delete("/:id", checkIfAuthorized, async function (req, res) {
-  await hotelService.deleteHotel(req.params.id);
+router.delete("/:id", checkIfAuthorized, async function (req, res, next) {
+  try {
+    await hotelService.deleteHotel(req.params.id);
 
-  await client.del("/hotels");
+    await client.del("/hotels");
 
-  res.sendStatus(204);
+    return res.sendStatus(204);
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

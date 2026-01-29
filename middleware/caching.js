@@ -1,14 +1,15 @@
+// middleware/caching.js
 var client = require("../redis.js");
 
-function cache(viewName, dataProp, cacheKey) {
+function cache(viewName, dataKey) {
   return async function (req, res, next) {
     try {
-      const key = cacheKey || req.originalUrl;
+      const key = req.originalUrl; // e.g. "/hotels"
       const cached = await client.get(key);
 
       if (cached) {
         return res.render(viewName, {
-          [dataProp]: JSON.parse(cached),
+          [dataKey]: JSON.parse(cached),
           user: req.user ?? null,
           username: req.user?.username ?? null,
         });
@@ -23,5 +24,4 @@ function cache(viewName, dataProp, cacheKey) {
 }
 
 module.exports = cache;
-
 

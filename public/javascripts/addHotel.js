@@ -1,3 +1,4 @@
+// public/javascripts/addHotel.js
 async function addHotel(url) {
   const name = prompt("Provide the new hotel's name");
   if (!name) return;
@@ -9,21 +10,21 @@ async function addHotel(url) {
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "same-origin", // IMPORTANT on Render (cookies/session)
       body: JSON.stringify({
         Name: name,
         Location: hotelLocation,
       }),
     });
 
-    if (!response.ok) {
-      alert("Could not create hotel");
+    if (response.ok) {
+      location.reload();
       return;
     }
 
-    location.reload();
+    const text = await response.text();
+    alert(text || response.statusText);
   } catch (err) {
-    console.error(err);
-    alert("Could not create hotel");
+    alert("Network error: " + err.message);
   }
 }
+
